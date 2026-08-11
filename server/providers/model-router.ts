@@ -50,6 +50,10 @@ function capabilityFit(model: ModelDefinition, capabilities: RoutingCapability[]
 }
 
 export function routeModel(registry: ModelRegistry, request: ModelRoutingRequest): ModelRoutingDecision {
+  if (request.budgetRemaining <= 0) {
+    throw new Error("No execution budget remains");
+  }
+
   const excluded = new Set(request.excludeModels ?? []);
   const minContext = request.minimumContext ?? 0;
   const minReasoning = request.minimumReasoning ?? "standard";
@@ -70,13 +74,12 @@ export function routeModel(registry: ModelRegistry, request: ModelRoutingRequest
     if (request.objective === "BEST_VALUE") score += fit * 4 - cost * 100;
     if (request.objective === "MAXIMUM_RIGOR") score += tier * 8 + fit * 6;
 
-    // Very small jobs should not pay for a premium model merely because it exists.
     if (request.estimatedInputTokens + request.estimatedOutputTokens < 4000 && tier >= 2 && request.objective !== "MAXIMUM_RIGOR") score -= 15;
 
     const contextPenalty = REASONING_RANK[minReasoning] >= 3 && model.contextWindow < 100_000 ? 20 : 0;
     score -= contextPenalty;
     return { model, cost, score };
-  }).filter(x => x.cost <= request.budgetRemaining || request.budgetRemaining <= 0);
+  }).filter(x => x.cost <= request.budgetRemaining);
 
   if (ranked.length === 0) {
     throw new Error(`No model can satisfy the routing constraints within the remaining budget of $${request.budgetRemaining.toFixed(4)}`);
@@ -94,7 +97,7 @@ export function routeModel(registry: ModelRegistry, request: ModelRoutingRequest
     model: winner.model,
     estimatedCost: winner.cost,
     score: winner.score,
-    reason: `${request.objective}: selected ${winner.model.displayName}; estimated cost $${winner.cost.toFixed(4)}, capability fit ${capabilityFit(winner.model, request.capabilities)}.` ,
+    reason: `${request.objective}: selected ${winner.model.displayName}; estimated cost $${winner.cost.toFixed(4)}, capability fit ${capabilityFit(winner.model, request.capabilities)}.`,
     alternatives,
   };
 }

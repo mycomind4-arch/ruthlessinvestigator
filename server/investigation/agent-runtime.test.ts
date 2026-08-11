@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { BulletinBoard } from "./bulletin-board.js";
 import { ToolPermissionManager } from "./tool-permissions.js";
+import { globalAgentRuntime } from "./agent-runtime.js";
 
 describe("Agent operating system primitives", () => {
   it("requires explicit permission before a tool is allowed", () => {
@@ -25,5 +26,22 @@ describe("Agent operating system primitives", () => {
     const handoff = board.handoff({ investigationId: "inv-1", fromAgent: "osint", toAgent: "skeptic", task: "Verify source", reason: "Potential contradiction", evidence: ["ev-1"], sourceReferences: ["src-1"], constraints: ["primary sources preferred"], expectedResult: "verified or unresolved" });
     expect(handoff.status).toBe("QUEUED");
     expect(board.getHandoffs("inv-1")[0].toAgent).toBe("skeptic");
+  });
+
+  it("selects primary-source search for primary researchers", () => {
+    const plan = globalAgentRuntime.planResearch("PRIMARY_SOURCE_RESEARCHER", "Find official government records about data center permits");
+    expect(plan.tool).toBe("web_search");
+    expect(plan.query).toContain("primary source");
+  });
+
+  it("selects adversarial search for disconfirmation", () => {
+    const plan = globalAgentRuntime.planResearch("ADVERSARIAL", "Try to disprove the leading hypothesis");
+    expect(plan.tool).toBe("web_search");
+    expect(plan.query).toContain("counterevidence");
+  });
+
+  it("selects GitHub discovery for implementation and skill research", () => {
+    const plan = globalAgentRuntime.planResearch("OSINT_RESEARCHER", "Find open source repositories and reusable skills");
+    expect(plan.tool).toBe("github_search");
   });
 });

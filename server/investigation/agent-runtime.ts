@@ -29,14 +29,40 @@ export interface ComputerExecutionRecord {
 
 export interface ResearchPlan { tool: NetworkToolId; reason: string; query: string; maxResults: number; }
 
-/** Runtime gateway for agent capabilities. All network activity is explicit, permission checked and logged. */
+const COMPUTER_TOOL_IDS = {
+  workspace: "computer_workspace",
+  exec: "computer_exec",
+  read: "computer_read",
+  write: "computer_write",
+  list: "computer_list",
+} as const;
+
+/** Runtime gateway for agent capabilities. All network/computer activity is explicit, permission checked and logged. */
 export class AgentRuntime {
   private executions: ToolExecutionRecord[] = [];
   private computerExecutions: ComputerExecutionRecord[] = [];
   private computerProvider: ComputerProvider = localComputerProvider;
 
+  constructor() {
+    // The Director is the only role with built-in computer authority. Other
+    // agents must earn/grant these capabilities through the existing permission system.
+    for (const toolId of Object.values(COMPUTER_TOOL_IDS)) {
+      globalToolPermissions.grant({
+        agentId: "DIRECTOR",
+        toolId,
+        permission: "ALLOWED",
+        scope: "INVESTIGATION_ONLY",
+        reason: "Director system capability: coordinate bounded investigation execution",
+      });
+    }
+  }
+
   setComputerProvider(provider: ComputerProvider): void {
     this.computerProvider = provider;
+  }
+
+  private computerPermission(agentId: string, toolId: string): boolean {
+    return globalToolPermissions.check(agentId, toolId, "INVESTIGATION_ONLY") === "ALLOWED";
   }
 
   async network(investigationId: string, agentId: string, request: NetworkRequest): Promise<NetworkResult> {
@@ -56,12 +82,16 @@ export class AgentRuntime {
   }
 
   async computerWorkspace(investigationId: string, agentId: string): Promise<ComputerWorkspace> {
+    if (!this.computerPermission(agentId, COMPUTER_TOOL_IDS.workspace)) {
+      throw new Error("Computer workspace permission denied");
+    }
     const workspace = await this.computerProvider.workspace({ investigationId, agentId });
     this.postNote(investigationId, agentId, "Computer workspace ready", `${workspace.backend} workspace ${workspace.workspaceId} is available with ${workspace.permissions.join(", ")}.`, "STATUS");
     return workspace;
   }
 
   async computerExec(investigationId: string, agentId: string, request: ComputerExecRequest): Promise<ComputerExecResult> {
+    if (!this.computerPermission(agentId, COMPUTER_TOOL_IDS.exec)) return { ok: false, stdout: "", stderr: "Computer execution permission denied", exitCode: 126, durationMs: 0 };
     const workspace = await this.computerWorkspace(investigationId, agentId);
     const started = Date.now();
     const result = await this.computerProvider.exec(workspace, request);
@@ -71,6 +101,7 @@ export class AgentRuntime {
   }
 
   async computerRead(investigationId: string, agentId: string, path: string): Promise<ComputerFileResult> {
+    if (!this.computerPermission(agentId, COMPUTER_TOOL_IDS.read)) return { ok: false, path, error: "Computer read permission denied" };
     const workspace = await this.computerWorkspace(investigationId, agentId);
     const started = Date.now();
     const result = await this.computerProvider.readFile(workspace, path);
@@ -79,6 +110,7 @@ export class AgentRuntime {
   }
 
   async computerWrite(investigationId: string, agentId: string, path: string, content: string): Promise<ComputerFileResult> {
+    if (!this.computerPermission(agentId, COMPUTER_TOOL_IDS.write)) return { ok: false, path, error: "Computer write permission denied" };
     const workspace = await this.computerWorkspace(investigationId, agentId);
     const started = Date.now();
     const result = await this.computerProvider.writeFile(workspace, path, content);
@@ -87,6 +119,7 @@ export class AgentRuntime {
   }
 
   async computerList(investigationId: string, agentId: string, path = "/workspace"): Promise<ComputerListResult> {
+    if (!this.computerPermission(agentId, COMPUTER_TOOL_IDS.list)) return { ok: false, path, entries: [], error: "Computer list permission denied" };
     const workspace = await this.computerWorkspace(investigationId, agentId);
     const started = Date.now();
     const result = await this.computerProvider.list(workspace, path);

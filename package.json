@@ -1,15 +1,17 @@
 {
   "name": "ruthless-investigator",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.3.0",
   "type": "module",
   "scripts": {
-    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:tools\" \"npm run dev:client\"",
     "dev:client": "vite",
     "dev:server": "tsx watch server/index.ts",
+    "dev:tools": "tsx watch server/agent-tools-server.ts",
     "build": "tsc -p tsconfig.server.json && vite build",
     "preview": "vite preview",
     "start": "node dist/server/index.js",
+    "start:tools": "node dist/server/agent-tools-server.js",
     "test": "vitest run",
     "test:watch": "vitest"
   },

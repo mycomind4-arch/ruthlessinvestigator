@@ -2,6 +2,8 @@ import { globalAgentWorkspace } from "./agent-workspace.js";
 import type { NetworkRequest, NetworkResult, NetworkToolId } from "./network-tools.js";
 import { globalToolPermissions } from "./tool-permissions.js";
 import { globalBulletinBoard } from "./bulletin-board.js";
+import { localComputerProvider } from "./computer-fabric.js";
+import type { ComputerExecRequest, ComputerExecResult, ComputerFileResult, ComputerListResult, ComputerProvider, ComputerWorkspace } from "./computer-types.js";
 
 export interface ToolExecutionRecord {
   id: string;
@@ -13,11 +15,29 @@ export interface ToolExecutionRecord {
   costUSD: number;
 }
 
+export interface ComputerExecutionRecord {
+  id: string;
+  investigationId: string;
+  agentId: string;
+  workspaceId: string;
+  operation: "EXEC" | "READ" | "WRITE" | "LIST";
+  target: string;
+  ok: boolean;
+  durationMs: number;
+  createdAt: number;
+}
+
 export interface ResearchPlan { tool: NetworkToolId; reason: string; query: string; maxResults: number; }
 
 /** Runtime gateway for agent capabilities. All network activity is explicit, permission checked and logged. */
 export class AgentRuntime {
   private executions: ToolExecutionRecord[] = [];
+  private computerExecutions: ComputerExecutionRecord[] = [];
+  private computerProvider: ComputerProvider = localComputerProvider;
+
+  setComputerProvider(provider: ComputerProvider): void {
+    this.computerProvider = provider;
+  }
 
   async network(investigationId: string, agentId: string, request: NetworkRequest): Promise<NetworkResult> {
     const scope = request.repository ? "SPECIFIC_REPOSITORY" : request.domain ? "SPECIFIC_DOMAIN" : "PUBLIC_WEB";
@@ -33,6 +53,49 @@ export class AgentRuntime {
     this.executions.push({ id: `toolrun_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, investigationId, agentId, request, result, createdAt: Date.now(), costUSD: 0 });
     if (!result.ok) this.postNote(investigationId, agentId, "Network tool failed", `${request.tool}: ${result.error ?? "unknown error"}`, "WARNING");
     return result;
+  }
+
+  async computerWorkspace(investigationId: string, agentId: string): Promise<ComputerWorkspace> {
+    const workspace = await this.computerProvider.workspace({ investigationId, agentId });
+    this.postNote(investigationId, agentId, "Computer workspace ready", `${workspace.backend} workspace ${workspace.workspaceId} is available with ${workspace.permissions.join(", ")}.`, "STATUS");
+    return workspace;
+  }
+
+  async computerExec(investigationId: string, agentId: string, request: ComputerExecRequest): Promise<ComputerExecResult> {
+    const workspace = await this.computerWorkspace(investigationId, agentId);
+    const started = Date.now();
+    const result = await this.computerProvider.exec(workspace, request);
+    this.recordComputerExecution(investigationId, agentId, workspace.workspaceId, "EXEC", request.command, result.ok, Date.now() - started);
+    this.postNote(investigationId, agentId, result.ok ? "Computer command completed" : "Computer command blocked/failed", `${request.command}\n${result.stderr || result.stdout}`.slice(0, 4000), result.ok ? "STATUS" : "WARNING");
+    return result;
+  }
+
+  async computerRead(investigationId: string, agentId: string, path: string): Promise<ComputerFileResult> {
+    const workspace = await this.computerWorkspace(investigationId, agentId);
+    const started = Date.now();
+    const result = await this.computerProvider.readFile(workspace, path);
+    this.recordComputerExecution(investigationId, agentId, workspace.workspaceId, "READ", path, result.ok, Date.now() - started);
+    return result;
+  }
+
+  async computerWrite(investigationId: string, agentId: string, path: string, content: string): Promise<ComputerFileResult> {
+    const workspace = await this.computerWorkspace(investigationId, agentId);
+    const started = Date.now();
+    const result = await this.computerProvider.writeFile(workspace, path, content);
+    this.recordComputerExecution(investigationId, agentId, workspace.workspaceId, "WRITE", path, result.ok, Date.now() - started);
+    return result;
+  }
+
+  async computerList(investigationId: string, agentId: string, path = "/workspace"): Promise<ComputerListResult> {
+    const workspace = await this.computerWorkspace(investigationId, agentId);
+    const started = Date.now();
+    const result = await this.computerProvider.list(workspace, path);
+    this.recordComputerExecution(investigationId, agentId, workspace.workspaceId, "LIST", path, result.ok, Date.now() - started);
+    return result;
+  }
+
+  private recordComputerExecution(investigationId: string, agentId: string, workspaceId: string, operation: ComputerExecutionRecord["operation"], target: string, ok: boolean, durationMs: number) {
+    this.computerExecutions.push({ id: `computer_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, investigationId, agentId, workspaceId, operation, target, ok, durationMs, createdAt: Date.now() });
   }
 
   planResearch(agentId: string, objective: string): ResearchPlan {
@@ -63,6 +126,7 @@ export class AgentRuntime {
   grantTool(input: Parameters<typeof globalAgentWorkspace.grant>[0]) { return globalAgentWorkspace.grant(input); }
   handoff(input: Parameters<typeof globalAgentWorkspace.handoff>[0]) { return globalAgentWorkspace.handoff(input); }
   getExecutions(investigationId?: string): ToolExecutionRecord[] { return this.executions.filter(e => !investigationId || e.investigationId === investigationId); }
+  getComputerExecutions(investigationId?: string): ComputerExecutionRecord[] { return this.computerExecutions.filter(e => !investigationId || e.investigationId === investigationId); }
 }
 
 export const globalAgentRuntime = new AgentRuntime();

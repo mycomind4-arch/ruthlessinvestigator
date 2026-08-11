@@ -6,17 +6,22 @@ export interface AgentWorkspaceSnapshot {
   investigationId: string;
   agentId: string;
   permissions: ToolGrant[];
-  availableTools: Array<{ id: NetworkToolId; description: string; write: boolean }>;
+  availableTools: Array<{ id: string; description: string; write: boolean; kind: "NETWORK" | "COMPUTER" }>;
   recentNotes: BulletinPost[];
   handoffs: AgentHandoff[];
 }
 
 const TOOL_CATALOG: AgentWorkspaceSnapshot["availableTools"] = [
-  { id: "web_search", description: "Search the public web for discovery leads", write: false },
-  { id: "web_fetch", description: "Fetch a public web document for evidence review", write: false },
-  { id: "document_fetch", description: "Fetch a document URL for extraction", write: false },
-  { id: "github_search", description: "Search public GitHub repositories", write: false },
-  { id: "http_request", description: "Make an explicitly permissioned HTTP request; writes are never implicit", write: true },
+  { id: "web_search", description: "Search the public web for discovery leads", write: false, kind: "NETWORK" },
+  { id: "web_fetch", description: "Fetch a public web document for evidence review", write: false, kind: "NETWORK" },
+  { id: "document_fetch", description: "Fetch a document URL for extraction", write: false, kind: "NETWORK" },
+  { id: "github_search", description: "Search public GitHub repositories", write: false, kind: "NETWORK" },
+  { id: "http_request", description: "Make an explicitly permissioned HTTP request; writes are never implicit", write: true, kind: "NETWORK" },
+  { id: "computer_workspace", description: "Open the agent's bounded investigation workspace", write: false, kind: "COMPUTER" },
+  { id: "computer_exec", description: "Execute an explicitly authorized command inside the isolated computer", write: true, kind: "COMPUTER" },
+  { id: "computer_read", description: "Read a file from the isolated investigation workspace", write: false, kind: "COMPUTER" },
+  { id: "computer_write", description: "Write a file into the isolated investigation workspace", write: true, kind: "COMPUTER" },
+  { id: "computer_list", description: "List files in the isolated investigation workspace", write: false, kind: "COMPUTER" },
 ];
 
 export class AgentWorkspace {

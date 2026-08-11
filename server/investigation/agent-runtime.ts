@@ -1,4 +1,4 @@
-import { executeNetworkTool, type NetworkRequest, type NetworkResult } from "./network-tools.js";
+import { executeNetworkTool, type NetworkRequest, type NetworkResult, type NetworkToolId } from "./network-tools.js";
 import { globalToolPermissions } from "./tool-permissions.js";
 import { globalBulletinBoard } from "./bulletin-board.js";
 
@@ -12,6 +12,18 @@ export interface ToolExecutionRecord {
   costUSD: number;
 }
 
+export interface ResearchPlan {
+  tool: NetworkToolId;
+  reason: string;
+  query: string;
+  maxResults: number;
+}
+
+/**
+ * Runtime gateway for agent capabilities. The Director/agent layer chooses
+ * research intent; this gateway turns that intent into an explicitly logged,
+ * permission-checked network operation.
+ */
 export class AgentRuntime {
   private executions: ToolExecutionRecord[] = [];
 
@@ -22,11 +34,41 @@ export class AgentRuntime {
     if (permission !== "ALLOWED") {
       const result: NetworkResult = { ok: false, tool: request.tool, query: request.query, sources: [], error: permission === "ASK" ? "Tool permission required" : "Tool access denied", durationMs: 0 };
       this.executions.push({ id: `toolrun_${Date.now()}`, investigationId, agentId, request, result, createdAt: Date.now(), costUSD: 0 });
+      this.postNote(investigationId, agentId, "Network tool blocked", `${request.tool} was not executed: ${result.error}`, "WARNING");
       return result;
     }
     const result = await executeNetworkTool(request);
     this.executions.push({ id: `toolrun_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, investigationId, agentId, request, result, createdAt: Date.now(), costUSD: 0 });
     return result;
+  }
+
+  /**
+   * Convert an agent's research objective into a small, inspectable tool plan.
+   * This prevents every agent from blindly using the same search strategy.
+   */
+  planResearch(agentId: string, objective: string): ResearchPlan {
+    const normalized = objective.toLowerCase();
+    if (agentId === "PRIMARY_SOURCE_RESEARCHER" || /primary|government|filing|record|official|regulator|court|contract/.test(normalized)) {
+      return { tool: "web_search", reason: "Prioritize primary/authoritative source discovery", query: `${objective} primary source official government filing record`, maxResults: 6 };
+    }
+    if (agentId === "ADVERSARIAL" || agentId === "SKEPTIC" || /disprove|counter|contradict|challenge|falsif/.test(normalized)) {
+      return { tool: "web_search", reason: "Search specifically for contradictory or disconfirming evidence", query: `${objective} contradiction counterevidence criticism data`, maxResults: 6 };
+    }
+    if (/github|repository|open source|implementation|library|skill/.test(normalized)) {
+      return { tool: "github_search", reason: "Search the software ecosystem for reusable implementations", query: objective, maxResults: 8 };
+    }
+    return { tool: "web_search", reason: "Broad discovery pass before deeper source verification", query: objective, maxResults: 5 };
+  }
+
+  async researchForAgent(investigationId: string, agentId: string, objective: string, timeoutMs = 12000): Promise<NetworkResult> {
+    const plan = this.planResearch(agentId, objective);
+    this.postNote(investigationId, agentId, "Research plan selected", `${plan.tool}: ${plan.reason}\nQuery: ${plan.query}`, "METHODOLOGY");
+    return this.network(investigationId, agentId, {
+      tool: plan.tool,
+      query: plan.query,
+      maxResults: plan.maxResults,
+      timeoutMs,
+    });
   }
 
   postNote(investigationId: string, agentId: string, subject: string, message: string, type: "DISCOVERY" | "WARNING" | "QUESTION" | "LEAD" | "CONTRADICTION" | "SOURCE" | "EVIDENCE" | "TASK_REQUEST" | "TASK_RESULT" | "ENTITY" | "RELATIONSHIP" | "METHODOLOGY" | "SKILL_DISCOVERY" | "SKILL_FAILURE" | "STATUS" = "STATUS") {

@@ -1,7 +1,7 @@
 // ─── INVESTIGATION OPTIMIZATION POLICY ─────────────────────────────────────
-// Central policy layer for keeping investigations coherent, economical, and
-// explainable. This module is deliberately deterministic: the Director owns
-// WHAT to investigate; this policy governs HOW much machinery should be used.
+// Central deterministic policy for keeping investigations coherent,
+// economical, and explainable. The Director owns WHAT to investigate; this
+// policy governs HOW MUCH machinery should be used.
 
 export type OptimizationMode = "ECONOMY" | "STANDARD" | "DEEP" | "MAXIMUM";
 
@@ -41,11 +41,7 @@ export interface OptimizationDecision {
   dedupeKey: string;
 }
 
-const DEPTH: Record<OptimizationMode, {
-  context: number;
-  escalations: number;
-  attempts: number;
-}> = {
+const DEPTH: Record<OptimizationMode, { context: number; escalations: number; attempts: number }> = {
   ECONOMY: { context: 8_000, escalations: 0, attempts: 1 },
   STANDARD: { context: 24_000, escalations: 1, attempts: 2 },
   DEEP: { context: 64_000, escalations: 2, attempts: 3 },
@@ -53,12 +49,13 @@ const DEPTH: Record<OptimizationMode, {
 };
 
 function clamp(value: number, min = 0, max = 10): number {
-  return Math.max(min, Math.min(max, value));
+  return Math.max(min, Math.min(max, Number.isFinite(value) ? value : 0));
 }
 
 /**
  * Decide how much reasoning to buy for a task before selecting a model.
- * This is intentionally separate from model routing.
+ * Budget is a hard constraint: a plan may not authorize paid execution when
+ * the estimated cost is greater than the remaining budget.
  */
 export function decideOptimization(input: OptimizationInput): OptimizationDecision {
   const importance = clamp(input.importance);
@@ -66,13 +63,15 @@ export function decideOptimization(input: OptimizationInput): OptimizationDecisi
   const impact = clamp(input.expectedImpact);
   const evidence = clamp(input.availableEvidence);
   const contradictions = clamp(input.unresolvedContradictions);
+  const estimatedCost = Math.max(0, input.estimatedCost);
+  const budgetRemaining = Math.max(0, input.budgetRemaining);
 
   const value = (importance * uncertainty * impact) / 1000;
   const danger = (contradictions * 0.08) + (input.requiresDeepReasoning ? 0.2 : 0);
 
   let mode: OptimizationMode;
-  if (input.userRequestedDepth) {
-    mode = input.budgetRemaining >= Math.max(input.estimatedCost, 1) ? "DEEP" : "STANDARD";
+  if (input.userRequestedDepth && budgetRemaining >= estimatedCost) {
+    mode = "DEEP";
   } else if (value < 0.08 && evidence >= 7 && contradictions <= 1) {
     mode = "ECONOMY";
   } else if (danger >= 0.45 || input.workKind === "ADVERSARIAL" || input.workKind === "CAUSAL_ANALYSIS") {
@@ -83,38 +82,42 @@ export function decideOptimization(input: OptimizationInput): OptimizationDecisi
     mode = "STANDARD";
   }
 
+  // A user request can increase desired depth, but never overrides budget.
+  const budgetTooLow = estimatedCost > budgetRemaining;
+  if (budgetTooLow) mode = "ECONOMY";
+
   const depth = DEPTH[mode];
-  const budgetTooLow = input.estimatedCost > input.budgetRemaining;
-
-  if (budgetTooLow && mode !== "ECONOMY") {
-    mode = "ECONOMY";
-  }
-
-  const finalDepth = DEPTH[mode];
-  const proceed = !budgetTooLow || mode === "ECONOMY";
+  const canAfford = estimatedCost <= budgetRemaining;
+  const proceed = canAfford;
 
   return {
     proceed,
     mode,
-    reason: budgetTooLow
-      ? "Requested depth exceeds the remaining investigation budget; degraded to the least expensive viable pass."
-      : `Selected ${mode} because task value, uncertainty, evidence state, and adversarial risk justify this reasoning depth.`,
-    maxModelEscalations: finalDepth.escalations,
-    maxAttempts: finalDepth.attempts,
-    contextBudgetTokens: finalDepth.context,
+    reason: !canAfford
+      ? `Execution blocked: estimated cost $${estimatedCost.toFixed(4)} exceeds remaining budget $${budgetRemaining.toFixed(4)}.`
+      : budgetTooLow
+        ? "Budget constrained the task to the least expensive viable pass."
+        : `Selected ${mode} because task value, uncertainty, evidence state, and adversarial risk justify this reasoning depth.`,
+    maxModelEscalations: depth.escalations,
+    maxAttempts: depth.attempts,
+    contextBudgetTokens: depth.context,
     cacheEligible: mode !== "MAXIMUM" && !input.requiresDeepReasoning,
     dedupeKey: createWorkDedupeKey(input),
   };
 }
 
 /** Stable key used to prevent paying twice for materially identical work. */
-export function createWorkDedupeKey(input: Pick<OptimizationInput, "workKind" | "importance" | "uncertainty" | "expectedImpact"> & { taskId?: string; question?: string }): string {
+export function createWorkDedupeKey(
+  input: Pick<OptimizationInput, "workKind" | "importance" | "uncertainty" | "expectedImpact"> & {
+    taskId?: string;
+    question?: string;
+  },
+): string {
   const normalizedQuestion = (input.question ?? "")
     .trim()
     .toLowerCase()
     .replace(/\s+/g, " ");
   return [
-    input.taskId ?? "task",
     input.workKind,
     normalizedQuestion,
     Math.round(input.importance),
@@ -123,10 +126,7 @@ export function createWorkDedupeKey(input: Pick<OptimizationInput, "workKind" | 
   ].join("|");
 }
 
-/**
- * Returns true when a result is strong enough to avoid an automatic retry.
- * A disagreement or contradiction should normally trigger escalation instead.
- */
+/** Returns true when a result is strong enough to avoid automatic retry. */
 export function isReusableResult(result: {
   confidence: number;
   hasContradiction?: boolean;
@@ -135,10 +135,7 @@ export function isReusableResult(result: {
   return result.confidence >= 0.78 && !result.hasContradiction && !result.hasMissingCriticalEvidence;
 }
 
-/**
- * Canonical subsystem authority. Keeping this explicit prevents multiple
- * modules from independently becoming "the Director".
- */
+/** Canonical subsystem authority contract. */
 export const SUBSYSTEM_AUTHORITY = {
   director: "WHAT_NEXT",
   taskManager: "TASK_LIFECYCLE",

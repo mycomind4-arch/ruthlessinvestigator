@@ -12,7 +12,6 @@ describe("model router", () => {
       estimatedInputTokens: 1000,
       estimatedOutputTokens: 500,
     });
-
     expect(decision.model.costTier).toBe("free");
     expect(decision.estimatedCost).toBe(0);
   });
@@ -28,7 +27,6 @@ describe("model router", () => {
       estimatedInputTokens: 20_000,
       estimatedOutputTokens: 8_000,
     });
-
     expect(decision.model.contextWindow).toBeGreaterThanOrEqual(100_000);
     expect(decision.estimatedCost).toBeLessThanOrEqual(1);
   });
@@ -42,8 +40,18 @@ describe("model router", () => {
       estimatedInputTokens: 1000,
       estimatedOutputTokens: 1000,
     });
-
     expect(decision.estimatedCost).toBeLessThanOrEqual(0.0002);
+  });
+
+  it("fails closed when no execution budget remains", () => {
+    const registry = new ModelRegistry();
+    expect(() => routeModel(registry, {
+      objective: "CHEAPEST_SUFFICIENT",
+      capabilities: ["extraction"],
+      budgetRemaining: 0,
+      estimatedInputTokens: 1000,
+      estimatedOutputTokens: 500,
+    })).toThrow("No execution budget remains");
   });
 
   it("respects model exclusions", () => {
@@ -56,7 +64,6 @@ describe("model router", () => {
       estimatedOutputTokens: 500,
       excludeModels: ["mock/deterministic"],
     });
-
     expect(decision.model.id).not.toBe("mock/deterministic");
   });
 

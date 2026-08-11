@@ -279,7 +279,44 @@ const PHASE_LABELS: Record<string, string> = {
   CONVERGED: "Converged",
 };
 
-type TabType = "feed" | "hypotheses" | "evidence" | "sources" | "director" | "scorecard" | "revisions" | "assessment";
+type TabType = "feed" | "hypotheses" | "evidence" | "sources" | "director" | "scorecard" | "revisions" | "assessment" | "capabilities";
+
+// ─── Capability Types (Directive 06) ────────────────────────────────────
+interface Capability {
+  id: string;
+  name: string;
+  description: string;
+  type: string;
+  domain: string;
+  capabilities: string[];
+  trustLevel: string;
+  status: string;
+  costProfile: { financialCost: number; expectedEvidenceValue: string };
+  performanceMetrics: { timesUsed: number; successfulRuns: number; failedRuns: number };
+  createdAt: number;
+  updatedAt: number;
+}
+
+interface CapabilityGap {
+  id: string;
+  investigationId: string;
+  description: string;
+  domain: string;
+  type: string;
+  importance: string;
+  missingCapability: string;
+  urgency: string;
+  createdAt: number;
+}
+
+interface CapabilityEvent {
+  id: string;
+  eventType: string;
+  message: string;
+  capabilityId?: string;
+  investigationId?: string;
+  timestamp: number;
+}
 
 function timeAgo(ts: number): string {
   const s = Math.floor((Date.now() - ts) / 1000);
@@ -344,6 +381,10 @@ function App() {
   const [intervention, setIntervention] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [selectedTab, setSelectedTab] = useState<TabType>("feed");
+  const [capabilities, setCapabilities] = useState<Capability[]>([]);
+  const [capabilityGaps, setCapabilityGaps] = useState<CapabilityGap[]>([]);
+  const [capabilityEvents, setCapabilityEvents] = useState<CapabilityEvent[]>([]);
+  const [capFilter, setCapFilter] = useState<string>("all");
   const [mockMode, setMockMode] = useState(false);
   const eventSourceRef = useRef<EventSource | null>(null);
 
@@ -526,6 +567,7 @@ function App() {
               ["scorecard", "Scorecard"],
               ["revisions", "Revisions"],
               ["assessment", "Assessment"],
+              ["capabilities", "Capabilities"],
             ] as [TabType, string][]).map(([tab, label]) => (
               <button
                 key={tab}
@@ -538,6 +580,9 @@ function App() {
                 )}
                 {tab === "revisions" && state.assessmentRevisions && state.assessmentRevisions.length > 0 && (
                   <span className="tab-badge">{state.assessmentRevisions.length}</span>
+                )}
+                {tab === "capabilities" && capabilities.length > 0 && (
+                  <span className="tab-badge">{capabilities.length}</span>
                 )}
               </button>
             ))}

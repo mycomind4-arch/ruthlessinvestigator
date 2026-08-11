@@ -1,4 +1,5 @@
-import { executeNetworkTool, type NetworkRequest, type NetworkResult, type NetworkToolId } from "./network-tools.js";
+import { globalAgentWorkspace } from "./agent-workspace.js";
+import type { NetworkRequest, NetworkResult, NetworkToolId } from "./network-tools.js";
 import { globalToolPermissions } from "./tool-permissions.js";
 import { globalBulletinBoard } from "./bulletin-board.js";
 
@@ -12,18 +13,9 @@ export interface ToolExecutionRecord {
   costUSD: number;
 }
 
-export interface ResearchPlan {
-  tool: NetworkToolId;
-  reason: string;
-  query: string;
-  maxResults: number;
-}
+export interface ResearchPlan { tool: NetworkToolId; reason: string; query: string; maxResults: number; }
 
-/**
- * Runtime gateway for agent capabilities. The Director/agent layer chooses
- * research intent; this gateway turns that intent into an explicitly logged,
- * permission-checked network operation.
- */
+/** Runtime gateway for agent capabilities. All network activity is explicit, permission checked and logged. */
 export class AgentRuntime {
   private executions: ToolExecutionRecord[] = [];
 
@@ -37,15 +29,12 @@ export class AgentRuntime {
       this.postNote(investigationId, agentId, "Network tool blocked", `${request.tool} was not executed: ${result.error}`, "WARNING");
       return result;
     }
-    const result = await executeNetworkTool(request);
+    const result = await globalAgentWorkspace.execute(investigationId, agentId, request);
     this.executions.push({ id: `toolrun_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, investigationId, agentId, request, result, createdAt: Date.now(), costUSD: 0 });
+    if (!result.ok) this.postNote(investigationId, agentId, "Network tool failed", `${request.tool}: ${result.error ?? "unknown error"}`, "WARNING");
     return result;
   }
 
-  /**
-   * Convert an agent's research objective into a small, inspectable tool plan.
-   * This prevents every agent from blindly using the same search strategy.
-   */
   planResearch(agentId: string, objective: string): ResearchPlan {
     const normalized = objective.toLowerCase();
     if (agentId === "PRIMARY_SOURCE_RESEARCHER" || /primary|government|filing|record|official|regulator|court|contract/.test(normalized)) {
@@ -63,18 +52,16 @@ export class AgentRuntime {
   async researchForAgent(investigationId: string, agentId: string, objective: string, timeoutMs = 12000): Promise<NetworkResult> {
     const plan = this.planResearch(agentId, objective);
     this.postNote(investigationId, agentId, "Research plan selected", `${plan.tool}: ${plan.reason}\nQuery: ${plan.query}`, "METHODOLOGY");
-    return this.network(investigationId, agentId, {
-      tool: plan.tool,
-      query: plan.query,
-      maxResults: plan.maxResults,
-      timeoutMs,
-    });
+    return this.network(investigationId, agentId, { tool: plan.tool, query: plan.query, maxResults: plan.maxResults, timeoutMs });
   }
 
   postNote(investigationId: string, agentId: string, subject: string, message: string, type: "DISCOVERY" | "WARNING" | "QUESTION" | "LEAD" | "CONTRADICTION" | "SOURCE" | "EVIDENCE" | "TASK_REQUEST" | "TASK_RESULT" | "ENTITY" | "RELATIONSHIP" | "METHODOLOGY" | "SKILL_DISCOVERY" | "SKILL_FAILURE" | "STATUS" = "STATUS") {
     return globalBulletinBoard.post({ investigationId, authorAgent: agentId, type, subject, message, relatedClaims: [], relatedEvidence: [], relatedSources: [], relatedHypotheses: [], relatedTasks: [], importance: type === "WARNING" || type === "CONTRADICTION" ? "HIGH" : "MODERATE" });
   }
 
+  workspace(investigationId: string, agentId: string) { return globalAgentWorkspace.snapshot(investigationId, agentId); }
+  grantTool(input: Parameters<typeof globalAgentWorkspace.grant>[0]) { return globalAgentWorkspace.grant(input); }
+  handoff(input: Parameters<typeof globalAgentWorkspace.handoff>[0]) { return globalAgentWorkspace.handoff(input); }
   getExecutions(investigationId?: string): ToolExecutionRecord[] { return this.executions.filter(e => !investigationId || e.investigationId === investigationId); }
 }
 

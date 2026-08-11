@@ -360,10 +360,8 @@ export class SkillExecutor {
             supportingEvidence: [],
             contradictingEvidence: [],
             status: "UNVERIFIED",
-            // sourceIds tracked separately
-            supportingEvidence: [],
+            createdBy: `SKILL:${skill.name}`,
             createdAt: Date.now(),
-            updatedAt: Date.now(),
           };
           state.claims.set(claimId, c);
           claimIds.push(claimId);

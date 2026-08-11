@@ -387,3 +387,321 @@ app.listen(PORT, async () => {
     }
   }
 });
+
+// ─── SKILL FOUNDRY API (Directive 05) ───────────────────────────────────────
+import { SkillRegistry, defaultPerformance, genSkillId } from "./investigation/skill-registry.js";
+import { SkillExecutor } from "./investigation/skill-executor.js";
+import { CapabilityGapDetector } from "./investigation/skill-discovery.js";
+import { SkillValidator, SkillImprovement } from "./investigation/skill-validation.js";
+import { registerBuiltinSkills } from "./investigation/builtin-skills.js";
+import type { Skill, SkillProposal, CapabilityGap, SkillStatus } from "./investigation/skill-types.js";
+import { SKILL_FOUNDRY_LIMITS } from "./investigation/skill-types.js";
+import { selectSkillForStep, detectCapabilityGaps, checkForSkillFoundryIntervention } from "./investigation/director.js";
+
+const skillRegistry = new SkillRegistry();
+registerBuiltinSkills(skillRegistry);
+await skillRegistry.load();
+
+// ─── List all skills ──────────────────────────────────────────────────────
+app.get("/api/skills", (req, res) => {
+  const status = req.query.status as SkillStatus | undefined;
+  const category = req.query.category as any;
+  const skills = skillRegistry.searchSkills({ status, category });
+  res.json({
+    total: skills.length,
+    skills: skills.map(s => ({
+      id: s.id,
+      name: s.name,
+      description: s.description,
+      category: s.category,
+      status: s.status,
+      version: s.version,
+      performance: s.performance,
+      subskills: s.subskills.length,
+      procedureSteps: s.procedure.length,
+      provenance: s.provenance.type,
+      domain: s.domain,
+      createdAt: s.createdAt,
+      updatedAt: s.updatedAt,
+    })),
+  });
+});
+
+// ─── Get skill detail ─────────────────────────────────────────────────────
+app.get("/api/skills/:id", (req, res) => {
+  const skill = skillRegistry.getSkill(req.params.id);
+  if (!skill) {
+    res.status(404).json({ error: "Skill not found" });
+    return;
+  }
+  res.json(skill);
+});
+
+// ─── Search skills ─────────────────────────────────────────────────────────
+app.post("/api/skills/search", (req, res) => {
+  const query = req.body;
+  const results = skillRegistry.searchSkills(query);
+  res.json({
+    total: results.length,
+    skills: results.map(s => ({
+      id: s.id,
+      name: s.name,
+      description: s.description,
+      category: s.category,
+      status: s.status,
+      performance: s.performance,
+    })),
+  });
+});
+
+// ─── Get skill proposals (capability gaps) ───────────────────────────────
+app.get("/api/skills/gaps/:investigationId", (req, res) => {
+  const engine = investigations.get(req.params.investigationId);
+  if (!engine) {
+    res.status(404).json({ error: "Investigation not found" });
+    return;
+  }
+  const state = engine.getState();
+  const detector = new CapabilityGapDetector(skillRegistry, state.id);
+  const gaps = detectCapabilityGaps(detector, state);
+  res.json({ gaps });
+});
+
+// ─── Activate a skill ──────────────────────────────────────────────────────
+app.post("/api/skills/:id/activate", (req, res) => {
+  try {
+    skillRegistry.activateSkill(req.params.id);
+    res.json({ success: true, message: "Skill activated" });
+  } catch (err) {
+    res.status(400).json({ error: err instanceof Error ? err.message : String(err) });
+  }
+});
+
+// ─── Deactivate a skill ────────────────────────────────────────────────────
+app.post("/api/skills/:id/deactivate", (req, res) => {
+  try {
+    skillRegistry.deactivateSkill(req.params.id);
+    res.json({ success: true, message: "Skill deactivated" });
+  } catch (err) {
+    res.status(400).json({ error: err instanceof Error ? err.message : String(err) });
+  }
+});
+
+// ─── Deprecate a skill ──────────────────────────────────────────────────────
+app.post("/api/skills/:id/deprecate", (req, res) => {
+  try {
+    skillRegistry.deprecateSkill(req.params.id);
+    res.json({ success: true, message: "Skill deprecated" });
+  } catch (err) {
+    res.status(400).json({ error: err instanceof Error ? err.message : String(err) });
+  }
+});
+
+// ─── Create a new skill manually ───────────────────────────────────────────
+app.post("/api/skills", async (req, res) => {
+  try {
+    const { name, description, purpose, category, inputs, outputs, procedure, domain } = req.body;
+    const skill: Skill = {
+      id: genSkillId(),
+      name,
+      description,
+      purpose: purpose ?? description,
+      category,
+      inputs: inputs ?? [],
+      outputs: outputs ?? [],
+      prerequisites: [],
+      procedure: procedure ?? [],
+      subskills: [],
+      compatibleAgents: req.body.compatibleAgents ?? [],
+      compatibleSources: req.body.compatibleSources ?? [],
+      validationTests: req.body.validationTests ?? [],
+      knownFailureModes: req.body.knownFailureModes ?? [],
+      provenance: { type: "USER_CREATED", createdAt: Date.now() },
+      version: 1,
+      status: "PROPOSED",
+      performance: defaultPerformance(),
+      versions: [],
+      failures: [],
+      domain,
+      maxCompositionDepth: req.body.maxCompositionDepth ?? 3,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+    skillRegistry.registerSkill(skill);
+    await skillRegistry.persist();
+    res.status(201).json(skill);
+  } catch (err) {
+    res.status(400).json({ error: err instanceof Error ? err.message : String(err) });
+  }
+});
+
+// ─── Compose skills ─────────────────────────────────────────────────────────
+app.post("/api/skills/compose", (req, res) => {
+  try {
+    const { parentSkillId, childSkillIds } = req.body;
+    const parent = skillRegistry.getSkill(parentSkillId);
+    if (!parent) {
+      res.status(404).json({ error: "Parent skill not found" });
+      return;
+    }
+    const children = childSkillIds
+      .map((id: string) => skillRegistry.getSkill(id))
+      .filter((s: Skill | undefined): s is Skill => s !== undefined);
+    if (children.length !== childSkillIds.length) {
+      res.status(400).json({ error: "One or more child skills not found" });
+      return;
+    }
+    const composed = skillRegistry.composeSkills(parent, children);
+    res.status(201).json(composed);
+  } catch (err) {
+    res.status(400).json({ error: err instanceof Error ? err.message : String(err) });
+  }
+});
+
+// ─── Get skill version history ──────────────────────────────────────────────
+app.get("/api/skills/:id/versions", (req, res) => {
+  const history = skillRegistry.getVersionHistory(req.params.id);
+  res.json({ versions: history });
+});
+
+// ─── Create new skill version ────────────────────────────────────────────────
+app.post("/api/skills/:id/version", async (req, res) => {
+  try {
+    const { changes, changeReason, modifications } = req.body;
+    const improvement = new SkillImprovement(skillRegistry, "manual");
+    const newVersion = improvement.proposeImprovement(req.params.id, changes, changeReason, modifications);
+    if (!newVersion) {
+      res.status(404).json({ error: "Skill not found" });
+      return;
+    }
+    await skillRegistry.persist();
+    res.status(201).json(newVersion);
+  } catch (err) {
+    res.status(400).json({ error: err instanceof Error ? err.message : String(err) });
+  }
+});
+
+// ─── Validate a skill ───────────────────────────────────────────────────────
+app.post("/api/skills/:id/validate", async (req, res) => {
+  try {
+    const skill = skillRegistry.getSkill(req.params.id);
+    if (!skill) {
+      res.status(404).json({ error: "Skill not found" });
+      return;
+    }
+    const investigationId = req.body.investigationId ?? "validation-sandbox";
+
+    // Use mock provider for validation
+    const { model, provider } = registry.resolve("mock/deterministic");
+    const executor = new SkillExecutor(skillRegistry, registry, investigationId);
+
+    // Create a minimal mock state
+    const mockState = {
+      id: investigationId,
+      question: "Validation test question",
+      phase: "RESEARCH" as const,
+      investigationCycle: 0,
+      maxCycles: 3,
+      hypotheses: new Map(),
+      evidence: new Map(),
+      claims: new Map(),
+      sources: new Map(),
+      contradictions: new Map(),
+      informationGaps: new Map(),
+      researchTasks: new Map(),
+      assessment: {
+        confidenceLevel: "LOW" as const,
+        summary: "",
+        supportingEvidence: [],
+        contradictingEvidence: [],
+        majorUnknowns: [],
+        hypothesisSummaries: [],
+        revisedAt: Date.now(),
+      },
+      cost: 0,
+      budget: { maxCost: SKILL_FOUNDRY_LIMITS.maxValidationBudget, maxDuration: SKILL_FOUNDRY_LIMITS.maxSkillExecutionTime, maxCycles: 5 },
+      agentRuns: [],
+      events: [],
+      converged: false,
+      paused: false,
+      assessmentSnapshots: [],
+      expandedScorecard: null,
+      investigationMode: "STANDARD" as const,
+      reasoningConfig: { effort: "standard" as const, maxReasoningSteps: 10, currentDepth: 0, escalations: [], artifact: null },
+      currentCycle: null,
+      researchMissions: [],
+      memory: { items: [], currentFocus: [], resolvedQuestions: [], supersededItems: [], summary: "" },
+    };
+
+    const validator = new SkillValidator(skillRegistry, investigationId);
+    const result = await validator.validate(skill, executor, mockState as any);
+
+    if (result.overallPass) {
+      skillRegistry.activateSkill(skill.id);
+      await skillRegistry.persist();
+    }
+
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
+  }
+});
+
+// ─── Get skill failures ──────────────────────────────────────────────────────
+app.get("/api/skills/:id/failures", (req, res) => {
+  const skill = skillRegistry.getSkill(req.params.id);
+  if (!skill) {
+    res.status(404).json({ error: "Skill not found" });
+    return;
+  }
+  res.json({ failures: skill.failures });
+});
+
+// ─── Check if investigation needs Skill Foundry intervention ────────────────
+app.get("/api/skills/intervention/:investigationId", (req, res) => {
+  const engine = investigations.get(req.params.investigationId);
+  if (!engine) {
+    res.status(404).json({ error: "Investigation not found" });
+    return;
+  }
+  const state = engine.getState();
+  const result = checkForSkillFoundryIntervention(state, skillRegistry);
+  res.json(result);
+});
+
+// ─── Execute a skill within an investigation ────────────────────────────────
+app.post("/api/skills/:id/execute", async (req, res) => {
+  try {
+    const skill = skillRegistry.getSkill(req.params.id);
+    if (!skill) {
+      res.status(404).json({ error: "Skill not found" });
+      return;
+    }
+    if (skill.status !== "ACTIVE" && skill.status !== "VALIDATED") {
+      res.status(400).json({ error: `Skill is not active (status: ${skill.status})` });
+      return;
+    }
+
+    const { investigationId, inputs } = req.body;
+    const engine = investigations.get(investigationId);
+    if (!engine) {
+      res.status(404).json({ error: "Investigation not found" });
+      return;
+    }
+
+    const state = engine.getState();
+    const executor = new SkillExecutor(skillRegistry, registry, investigationId);
+    const result = await executor.execute(skill, state, inputs ?? {});
+    await skillRegistry.persist();
+
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
+  }
+});
+
+// ─── Persist skills on shutdown ─────────────────────────────────────────────
+process.on("SIGINT", async () => {
+  await skillRegistry.persist();
+  process.exit(0);
+});

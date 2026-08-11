@@ -945,3 +945,176 @@ export function createUserOverride(
     effects,
   };
 }
+
+// ─── SKILL FOUNDRY INTEGRATION ──────────────────────────────────────────────
+// The Director uses skills to structure investigation steps and detects
+// capability gaps for the Skill Foundry.
+
+import type {
+  Skill,
+  SkillProposal,
+  CapabilityGap,
+  SkillSearchQuery,
+} from "./skill-types.js";
+import type { SkillRegistry } from "./skill-registry.js";
+import type { CapabilityGapDetector } from "./skill-discovery.js";
+
+/**
+ * Select the best skill for a given investigation step.
+ * Returns the skill, or null if no matching skill exists.
+ */
+export function selectSkillForStep(
+  registry: SkillRegistry,
+  stepType: string,
+  agentRole: string,
+  context?: { domain?: string; inputType?: string },
+): Skill | null {
+  const query: SkillSearchQuery = {
+    compatibleAgent: agentRole,
+    status: "ACTIVE",
+  };
+  if (context?.domain) query.domain = context.domain;
+  if (context?.inputType) query.inputType = context.inputType;
+
+  const candidates = registry.searchSkills(query);
+  if (candidates.length === 0) return null;
+
+  // Filter by step type match in procedure
+  const matching = candidates.filter(skill =>
+    skill.procedure.some(step => step.type === stepType)
+  );
+
+  if (matching.length === 0) return candidates[0]; // fallback to first candidate
+
+  // Sort by success rate, then by cost
+  matching.sort((a, b) => {
+    const rateA = a.performance.usageCount > 0 ? a.performance.successCount / a.performance.usageCount : 0;
+    const rateB = b.performance.usageCount > 0 ? b.performance.successCount / b.performance.usageCount : 0;
+    if (rateB !== rateA) return rateB - rateA;
+    return a.performance.averageCost - b.performance.averageCost;
+  });
+
+  return matching[0];
+}
+
+/**
+ * Select skills for a research task based on its type and the agents available.
+ */
+export function selectSkillsForResearchTask(
+  registry: SkillRegistry,
+  task: ResearchTask,
+  agentRole: AgentRole,
+): Skill[] {
+  const active = registry.findActiveSkills();
+  const results: Skill[] = [];
+
+  for (const skill of active) {
+    // Check if skill's compatible agents include this role
+    if (!skill.compatibleAgents.includes(agentRole)) continue;
+
+    // Check if skill's procedure includes relevant step types
+    const hasRelevantStep = skill.procedure.some(step =>
+      step.type === "SEARCH_SOURCES" || step.type === "EXTRACT_EVIDENCE"
+    );
+    if (hasRelevantStep) results.push(skill);
+  }
+
+  // Sort by evidence yield (higher = better)
+  results.sort((a, b) => b.performance.evidenceYield - a.performance.evidenceYield);
+
+  return results.slice(0, 3); // top 3
+}
+
+/**
+ * Run capability gap detection as part of the investigation loop.
+ * Called after each cycle to find recurring problems.
+ */
+export function detectCapabilityGaps(
+  detector: CapabilityGapDetector,
+  state: InvestigationState,
+): CapabilityGap[] {
+  return detector.detectGaps(state);
+}
+
+/**
+ * Determine if any detected gaps should produce a skill proposal.
+ */
+export function evaluateGapForProposal(
+  detector: CapabilityGapDetector,
+  gap: CapabilityGap,
+): boolean {
+  return detector.shouldProposeSkill(gap);
+}
+
+/**
+ * Create a skill proposal from a capability gap.
+ */
+export function proposeSkillFromGap(
+  detector: CapabilityGapDetector,
+  gap: CapabilityGap,
+  provenance: import("./skill-types.js").SkillProvenance,
+): SkillProposal {
+  return detector.createProposal(gap, provenance);
+}
+
+/**
+ * Check if the investigation is hitting a wall that the Skill Foundry could help with.
+ */
+export function checkForSkillFoundryIntervention(
+  state: InvestigationState,
+  registry: SkillRegistry,
+): { shouldIntervene: boolean; reason: string } {
+  // Signal 1: Many open gaps with few skills available
+  const openGaps = [...state.informationGaps.values()].filter(g => g.status === "OPEN");
+  const activeSkills = registry.findActiveSkills();
+  if (openGaps.length > 5 && activeSkills.length < 5) {
+    return {
+      shouldIntervene: true,
+      reason: `${openGaps.length} open information gaps with only ${activeSkills.length} active skills — Skill Foundry should propose new capabilities`,
+    };
+  }
+
+  // Signal 2: Low evidence yield per cycle
+  const recentEvidence = [...state.evidence.values()].slice(-10);
+  if (state.investigationCycle > 2 && recentEvidence.length < 3) {
+    return {
+      shouldIntervene: true,
+      reason: `Low evidence yield in cycle ${state.investigationCycle} — existing skills may not be sufficient for this investigation type`,
+    };
+  }
+
+  // Signal 3: Unresolved contradictions stacking up
+  const unresolvedContradictions = [...state.contradictions.values()].filter(c => c.status === "UNRESOLVED");
+  if (unresolvedContradictions.length >= 3) {
+    return {
+      shouldIntervene: true,
+      reason: `${unresolvedContradictions.length} unresolved contradictions — a specialized contradiction resolution skill may be needed`,
+    };
+  }
+
+  return { shouldIntervene: false, reason: "" };
+}
+
+/**
+ * Integrate skill execution into the next-action decision.
+ * If a skill matches the planned action, augment the action with skill info.
+ */
+export function augmentActionWithSkill(
+  registry: SkillRegistry,
+  action: NextInvestigationAction,
+): NextInvestigationAction {
+  if (action.type === "RESEARCH" || action.type === "REQUEST_MISSING_DATA" || action.type === "SEARCH_PRIMARY_SOURCE") {
+    const skill = selectSkillForStep(
+      registry,
+      "SEARCH_SOURCES",
+      "PRIMARY_SOURCE_RESEARCHER",
+    );
+    if (skill) {
+      return {
+        ...action,
+        reason: `${action.reason}\n\nSkill Foundry: Skill "${skill.name}" is available for this task (${skill.performance.usageCount} uses, ${Math.round(skill.performance.evidenceYield * 10) / 10} avg evidence yield).`,
+      };
+    }
+  }
+  return action;
+}

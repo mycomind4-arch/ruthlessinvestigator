@@ -1,0 +1,18 @@
+{
+  "name": "ruthless-investigator-cloudflare",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@cloudflare/sandbox": "^0.10.3"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260811.0",
+    "typescript": "^5.8.3",
+    "wrangler": "^4.28.0"
+  }
+}

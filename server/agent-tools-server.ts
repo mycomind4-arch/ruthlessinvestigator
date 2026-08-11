@@ -1,18 +1,22 @@
-// Standalone agent capability gateway. The main investigation API can consume these primitives
-// directly in-process; this server also makes them available for local tooling and future workers.
+// Standalone agent capability gateway. Network content is DATA, never instructions.
 import express from "express";
 import cors from "cors";
-import { executeNetworkTool } from "./investigation/network-tools.js";
 import { globalBulletinBoard } from "./investigation/bulletin-board.js";
 import { globalToolPermissions } from "./investigation/tool-permissions.js";
 import { globalAgentRuntime } from "./investigation/agent-runtime.js";
+import { globalAgentWorkspace } from "./investigation/agent-workspace.js";
 
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: "1mb" }));
 const port = Number(process.env.AGENT_TOOLS_PORT ?? 3002);
 
-app.get("/health", (_req, res) => res.json({ status: "ok", service: "agent-tools", network: ["web_search", "web_fetch", "github_search"] }));
+app.get("/health", (_req, res) => res.json({ status: "ok", service: "agent-tools", network: ["web_search", "web_fetch", "document_fetch", "github_search", "http_request"] }));
+
+// Full capability snapshot: what an agent can use and what its peers have left behind.
+app.get("/workspace/:investigationId/:agentId", (req, res) => {
+  res.json(globalAgentWorkspace.snapshot(req.params.investigationId, req.params.agentId));
+});
 
 app.post("/tools/network", async (req, res) => {
   const { agentId = "unknown", investigationId = "standalone", request } = req.body ?? {};
@@ -28,10 +32,16 @@ app.post("/bulletin", (req, res) => {
   try { res.status(201).json(globalBulletinBoard.post(req.body)); }
   catch (error) { res.status(400).json({ error: error instanceof Error ? error.message : String(error) }); }
 });
+
 app.get("/handoffs/:investigationId", (req, res) => res.json(globalBulletinBoard.getHandoffs(req.params.investigationId)));
 app.post("/handoffs", (req, res) => {
   try { res.status(201).json(globalBulletinBoard.handoff(req.body)); }
   catch (error) { res.status(400).json({ error: error instanceof Error ? error.message : String(error) }); }
+});
+app.patch("/handoffs/:investigationId/:handoffId", (req, res) => {
+  const item = globalBulletinBoard.updateHandoff(req.params.investigationId, req.params.handoffId, req.body?.status);
+  if (!item) { res.status(404).json({ error: "Handoff not found" }); return; }
+  res.json(item);
 });
 
 app.get("/permissions", (req, res) => res.json(globalToolPermissions.list(req.query.agentId as string | undefined)));
@@ -41,4 +51,5 @@ app.post("/permissions", (req, res) => {
 });
 app.delete("/permissions/:agentId/:toolId", (req, res) => { globalToolPermissions.revoke(req.params.agentId, req.params.toolId); res.json({ ok: true }); });
 
+await globalBulletinBoard.load();
 app.listen(port, () => console.log(`Ruthless Investigator Agent Tools running on http://localhost:${port}`));

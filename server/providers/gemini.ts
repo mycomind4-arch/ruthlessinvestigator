@@ -1,5 +1,6 @@
 // ─── GOOGLE GEMINI PROVIDER ───────────────────────────────────────────────
 // Direct Gemini API (not via OpenRouter).
+// Directive 05: Supports reasoning depth via thinkingBudget configuration.
 
 import type { AIProvider, AIRequest, AIResponse, ProviderCapabilities } from "./types.js";
 
@@ -21,6 +22,8 @@ export class GeminiProvider implements AIProvider {
       supportsSystemPrompt: true,
       supportsJSON: true,
       supportsTools: true,
+      supportsReasoning: true,
+      maxReasoningEffort: "maximum",
     };
   }
 
@@ -31,27 +34,48 @@ export class GeminiProvider implements AIProvider {
 
     const contents: Array<{ role: string; parts: Array<{ text: string }> }> = [];
 
-    // Gemini handles system instructions separately
     const systemInstruction = request.systemPrompt
       ? { parts: [{ text: request.systemPrompt }] }
       : undefined;
 
     contents.push({ role: "user", parts: [{ text: request.prompt }] });
 
+    const generationConfig: Record<string, unknown> = {
+      maxOutputTokens: request.maxTokens ?? 4096,
+      temperature: request.temperature ?? 0.7,
+    };
+
+    if (request.jsonMode) {
+      generationConfig.responseMimeType = "application/json";
+    }
+
+    // ─── Directive 05: Reasoning depth via thinkingBudget ──────────────
+    let reasoningEffort: string | undefined;
+    if (request.reasoning) {
+      const thinkingBudgetMap: Record<string, number> = {
+        standard: 0,      // thinking off
+        deep: 8192,       // moderate thinking
+        maximum: 24576,   // maximum thinking
+      };
+      const budget = request.reasoning.budgetTokens ?? thinkingBudgetMap[request.reasoning.effort];
+
+      // Gemini 2.5 models support thinkingConfig
+      if (/gemini-2\.5|gemini-2\.0-flash-thinking/i.test(request.model)) {
+        generationConfig.thinkingConfig = {
+          thinkingBudget: budget,
+          includeThoughts: false, // never expose chain-of-thought
+        };
+        reasoningEffort = request.reasoning.effort;
+      }
+    }
+
     const body: Record<string, unknown> = {
       contents,
-      generationConfig: {
-        maxOutputTokens: request.maxTokens ?? 4096,
-        temperature: request.temperature ?? 0.7,
-      },
+      generationConfig,
     };
 
     if (systemInstruction) {
       body.systemInstruction = systemInstruction;
-    }
-
-    if (request.jsonMode) {
-      (body.generationConfig as Record<string, unknown>).responseMimeType = "application/json";
     }
 
     const res = await fetch(endpoint, {
@@ -70,7 +94,7 @@ export class GeminiProvider implements AIProvider {
         content: { parts: Array<{ text: string }> };
         finishReason?: string;
       }>;
-      usageMetadata?: { promptTokenCount: number; candidatesTokenCount: number };
+      usageMetadata?: { promptTokenCount: number; candidatesTokenCount: number; thoughtsTokenCount?: number };
     };
 
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
@@ -81,13 +105,14 @@ export class GeminiProvider implements AIProvider {
       json: request.jsonMode ? this.tryParse(text) : undefined,
       usage: {
         inputTokens: data.usageMetadata?.promptTokenCount ?? 0,
-        outputTokens: data.usageMetadata?.candidatesTokenCount ?? 0,
+        outputTokens: (data.usageMetadata?.candidatesTokenCount ?? 0) + (data.usageMetadata?.thoughtsTokenCount ?? 0),
         costUSD: 0,
       },
       provider: this.id,
       model: request.model,
       durationMs,
       simulated: false,
+      reasoningEffort,
     };
   }
 

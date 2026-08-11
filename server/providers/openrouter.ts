@@ -1,9 +1,17 @@
 // ─── OPENROUTER PROVIDER ──────────────────────────────────────────────────
 // Multi-model gateway. One API key → access to many model families.
+// Directive 05: Supports reasoning depth via provider-specific parameters.
 
 import type { AIProvider, AIRequest, AIResponse, ProviderCapabilities } from "./types.js";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
+
+// Models that support OpenRouter reasoning_effort parameter
+const REASONING_MODELS = new Set([
+  "openai/o1", "openai/o1-mini", "openai/o1-pro", "openai/o3", "openai/o3-mini",
+  "openai/o4-mini", "anthropic/claude-3.5-sonnet", "anthropic/claude-3.5-opus",
+  "anthropic/claude-sonnet-4", "anthropic/claude-opus-4",
+]);
 
 export class OpenRouterProvider implements AIProvider {
   readonly id = "openrouter";
@@ -21,6 +29,8 @@ export class OpenRouterProvider implements AIProvider {
       supportsSystemPrompt: true,
       supportsJSON: true,
       supportsTools: true,
+      supportsReasoning: true,
+      maxReasoningEffort: "maximum",
     };
   }
 
@@ -42,6 +52,23 @@ export class OpenRouterProvider implements AIProvider {
 
     if (request.jsonMode) {
       body.response_format = { type: "json_object" };
+    }
+
+    // ─── Directive 05: Reasoning depth ────────────────────────────────
+    let reasoningEffort: string | undefined;
+    if (request.reasoning && REASONING_MODELS.has(request.model)) {
+      const effortMap: Record<string, string> = {
+        standard: "low",
+        deep: "medium",
+        maximum: "high",
+      };
+      reasoningEffort = effortMap[request.reasoning.effort];
+      body.reasoning_effort = reasoningEffort;
+
+      // Increase max tokens for deeper reasoning
+      if (request.reasoning.effort !== "standard") {
+        body.max_tokens = Math.max(body.max_tokens as number, 8192);
+      }
     }
 
     const res = await fetch(OPENROUTER_URL, {
@@ -74,12 +101,13 @@ export class OpenRouterProvider implements AIProvider {
       usage: {
         inputTokens: data.usage?.prompt_tokens ?? 0,
         outputTokens: data.usage?.completion_tokens ?? 0,
-        costUSD: 0, // OpenRouter doesn't always return cost; computed by cost tracker from model registry
+        costUSD: 0,
       },
       provider: this.id,
       model: request.model,
       durationMs,
       simulated: false,
+      reasoningEffort,
     };
   }
 
@@ -87,7 +115,6 @@ export class OpenRouterProvider implements AIProvider {
     try {
       return JSON.parse(text);
     } catch {
-      // Try extracting JSON from markdown code blocks
       const match = text.match(/```(?:json)?\s*([\s\S]*?)```/);
       if (match) {
         try { return JSON.parse(match[1]); } catch { /* fallthrough */ }

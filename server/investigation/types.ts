@@ -240,17 +240,29 @@ export interface Assessment {
 
 // ─── Investigation State ──────────────────────────────────────────────────
 export type InvestigationPhase =
-  | "DISCOVERY"
+  | "CREATED"
   | "PREMISE_AUDIT"
-  | "DECOMPOSITION"
+  | "QUESTION_DECOMPOSITION"
   | "HYPOTHESIS_GENERATION"
+  | "RESEARCH_PLANNING"
   | "INDEPENDENT_RESEARCH"
   | "EVIDENCE_ANALYSIS"
-  | "COUNCIL_COMPARISON"
+  | "SOURCE_ANALYSIS"
+  | "HYPOTHESIS_TESTING"
   | "ADVERSARIAL_REVIEW"
-  | "GAP_ANALYSIS"
+  | "DISAGREEMENT_REVIEW"
+  | "INFORMATION_GAP_ANALYSIS"
   | "TARGETED_RESEARCH"
   | "REASSESSMENT"
+  | "CONVERGENCE_REVIEW"
+  | "CONVERGED"
+  | "PAUSED"
+  | "FAILED"
+  // Legacy aliases for backward compat
+  | "DISCOVERY"
+  | "DECOMPOSITION"
+  | "COUNCIL_COMPARISON"
+  | "GAP_ANALYSIS"
   | "CONVERGENCE";
 
 export interface InvestigationState {
@@ -273,6 +285,27 @@ export interface InvestigationState {
   spentUSD: number;
   createdAt: number;
   updatedAt: number;
+  // ─── Director collections ───────────────────────────────────────────────
+  predictions: Map<string, import("./director-types.js").Prediction>;
+  failedPredictions: Map<string, import("./director-types.js").FailedPrediction>;
+  mindChangingEvidence: Map<string, import("./director-types.js").MindChangingEvidence>;
+  hypothesisCompetitions: Map<string, import("./director-types.js").HypothesisCompetition>;
+  discriminatingTasks: Map<string, import("./director-types.js").DiscriminatingEvidenceTask>;
+  evidenceClusters: Map<string, import("./director-types.js").EvidenceCluster>;
+  narrativePatterns: Map<string, import("./director-types.js").NarrativePattern>;
+  entities: Map<string, import("./director-types.js").Entity>;
+  relationships: Map<string, import("./director-types.js").EntityRelationship>;
+  timelines: Map<string, import("./director-types.js").Timeline>;
+  causalClaims: Map<string, import("./director-types.js").CausalClaim>;
+  investigationMemory: Map<string, import("./director-types.js").InvestigationMemory>;
+  assessmentRevisions: Map<string, import("./director-types.js").AssessmentRevision>;
+  scorecard: import("./director-types.js").InvestigationScorecard | null;
+  userOverrides: Map<string, import("./director-types.js").UserOverrideEvent>;
+  convergenceCheck: import("./director-types.js").ConvergenceCheck | null;
+  investigationCycle: number;
+  maxCycles: number;
+  converged: boolean;
+  paused: boolean;
 }
 
 // ─── Agent Run (for observability) ────────────────────────────────────────
@@ -331,7 +364,31 @@ export type EventType =
   | "budget_exceeded"
   | "cost_recorded"
   | "assessment_updated"
-  | "user_intervention";
+  | "user_intervention"
+  // ─── Director event types ───────────────────────────────────────────
+  | "director_next_action"
+  | "director_research_priority"
+  | "prediction_created"
+  | "prediction_tested"
+  | "prediction_failed"
+  | "mind_changing_evidence_updated"
+  | "hypothesis_competition"
+  | "discriminating_evidence_task"
+  | "discriminating_evidence_found"
+  | "evidence_cluster_detected"
+  | "narrative_pattern_detected"
+  | "entity_discovered"
+  | "relationship_investigated"
+  | "timeline_reconstructed"
+  | "causal_claim_reviewed"
+  | "investigation_memory_stored"
+  | "assessment_revision_created"
+  | "scorecard_updated"
+  | "user_override_recorded"
+  | "convergence_check"
+  | "investigation_reopened"
+  | "confirmation_bias_check"
+  | "next_action_explained";
 
 export interface InvestigationEvent {
   id: string;

@@ -2,12 +2,16 @@
 // The entire investigation system talks to AI models through this interface.
 // No vendor-specific imports leak into the orchestration layer.
 
+import type { ReasoningConfig } from "../investigation/persistence-types.js";
+
 export interface ProviderCapabilities {
   streaming: boolean;
   maxOutputTokens: number;
   supportsSystemPrompt: boolean;
   supportsJSON: boolean;
   supportsTools: boolean;
+  supportsReasoning: boolean; // Directive 05: reasoning depth support
+  maxReasoningEffort: "standard" | "deep" | "maximum";
 }
 
 export interface AIRequest {
@@ -25,6 +29,8 @@ export interface AIRequest {
   jsonMode?: boolean;
   /** Unique label for cost tracking */
   taskLabel?: string;
+  /** Directive 05: Reasoning depth configuration */
+  reasoning?: ReasoningConfig;
 }
 
 export interface AIResponse {
@@ -42,6 +48,8 @@ export interface AIResponse {
   durationMs: number;
   /** True if the response is simulated (MockProvider) */
   simulated: boolean;
+  /** Reasoning depth that was actually used */
+  reasoningEffort?: string;
 }
 
 export interface TokenUsage {

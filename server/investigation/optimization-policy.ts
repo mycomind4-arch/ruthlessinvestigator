@@ -83,7 +83,6 @@ export function decideOptimization(input: OptimizationInput): OptimizationDecisi
     mode = "STANDARD";
   }
 
-  const depth = DEPTH[mode];
   const budgetTooLow = input.estimatedCost > input.budgetRemaining;
 
   if (budgetTooLow && mode !== "ECONOMY") {
@@ -102,7 +101,7 @@ export function decideOptimization(input: OptimizationInput): OptimizationDecisi
     maxModelEscalations: finalDepth.escalations,
     maxAttempts: finalDepth.attempts,
     contextBudgetTokens: finalDepth.context,
-    cacheEligible: mode !== "MAXIMUM" && !input.requiresDeepReasoning,
+    cacheEligible: !input.requiresDeepReasoning,
     dedupeKey: createWorkDedupeKey(input),
   };
 }

@@ -40,6 +40,6 @@ describe("Ruthless Investigator MVP council", () => {
     expect(state.evidence.size).toBeGreaterThan(0);
     expect(state.assessment).not.toBeNull();
     expect(engine.getAgentRuns().length).toBeGreaterThan(0);
-    expect(engine.getCostSummary().spentUSD).toBe(0);
+    expect(engine.getCostSummary().spent).toBe(0);
   }, 30000);
 });

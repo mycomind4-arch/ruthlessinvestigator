@@ -15,3 +15,13 @@ export function isInvestigationRequestAuthorized(header: string | undefined, tok
   const expected = Buffer.from(token, "utf8");
   return supplied.length === expected.length && timingSafeEqual(supplied, expected);
 }
+
+/** Browser access is limited to the local Ruthless UI or explicitly trusted origins. */
+export function isInvestigationOriginAllowed(origin: string | undefined, configured = ""): boolean {
+  if (!origin) return true; // Server-to-server calls normally omit Origin.
+  const allowed = new Set([
+    "http://localhost:5173", "http://127.0.0.1:5173",
+    ...configured.split(",").map((value) => value.trim()).filter(Boolean),
+  ]);
+  return allowed.has(origin);
+}

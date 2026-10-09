@@ -4,6 +4,7 @@
 
 import express from "express";
 import cors from "cors";
+import { assertSafeInvestigationBind, isInvestigationRequestAuthorized } from "./api-access.js";
 import { ModelRegistry } from "./providers/registry.js";
 import { MockProvider } from "./providers/mock.js";
 import { OpenRouterProvider } from "./providers/openrouter.js";
@@ -22,6 +23,17 @@ import type { InvestigationMode } from "./investigation/persistence-types.js";
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: "2mb" }));
+
+const API_HOST = process.env.HOST ?? "127.0.0.1";
+const API_TOKEN = process.env.RUTHLESS_API_TOKEN?.trim();
+assertSafeInvestigationBind(API_HOST, API_TOKEN);
+app.use((req, res, next) => {
+  if (!isInvestigationRequestAuthorized(req.headers.authorization, API_TOKEN)) {
+    res.status(401).json({ error: "Unauthorized investigation API request" });
+    return;
+  }
+  next();
+});
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3001;
 
@@ -364,7 +376,7 @@ function listInvestigationsSync(): number {
 }
 
 // ─── Start server ────────────────────────────────────────────────────────
-app.listen(PORT, async () => {
+app.listen(PORT, API_HOST, async () => {
   console.log(`Ruthless Investigator API running on http://localhost:${PORT}`);
   console.log(`Providers: mock=✓ openrouter=${openrouterKey ? "✓" : "✗"} gemini=${geminiKey ? "✓" : "✗"}`);
   if (forceMock) {

@@ -4,7 +4,7 @@
 
 import express from "express";
 import cors from "cors";
-import { assertSafeInvestigationBind, isInvestigationRequestAuthorized } from "./api-access.js";
+import { assertSafeInvestigationBind, isInvestigationRequestAuthorized, isInvestigationOriginAllowed } from "./api-access.js";
 import { ModelRegistry } from "./providers/registry.js";
 import { MockProvider } from "./providers/mock.js";
 import { OpenRouterProvider } from "./providers/openrouter.js";
@@ -21,7 +21,15 @@ import {
 import type { InvestigationMode } from "./investigation/persistence-types.js";
 
 const app = express();
-app.use(cors());
+// Reject untrusted browser origins before they can trigger investigations or consume model credits.
+app.use((req, res, next) => {
+  if (!isInvestigationOriginAllowed(req.headers.origin, process.env.RUTHLESS_ALLOWED_ORIGINS)) {
+    res.status(403).json({ error: "Browser origin not authorized" });
+    return;
+  }
+  next();
+});
+app.use(cors({ origin: (origin, next) => next(null, isInvestigationOriginAllowed(origin, process.env.RUTHLESS_ALLOWED_ORIGINS)) }));
 app.use(express.json({ limit: "2mb" }));
 
 const API_HOST = process.env.HOST ?? "127.0.0.1";

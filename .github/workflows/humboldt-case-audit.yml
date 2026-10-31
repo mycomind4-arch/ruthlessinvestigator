@@ -1,0 +1,41 @@
+name: Humboldt Sourced Evidence Audit
+on:
+  push:
+    branches: [cases/humboldt-military-underground-2026]
+    paths:
+      - 'cases/humboldt-activity-2026/**'
+      - 'scripts/run-humboldt-case.ts'
+      - 'tests/humboldt-case.test.ts'
+      - '.github/workflows/humboldt-case-audit.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'cases/humboldt-activity-2026/**'
+      - 'scripts/run-humboldt-case.ts'
+      - 'tests/humboldt-case.test.ts'
+      - '.github/workflows/humboldt-case-audit.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Test evidence independence and contradiction analysis
+        run: npx vitest run tests/humboldt-case.test.ts
+      - name: Execute sourced Ruthless Investigator graph/lineage audit
+        run: npx tsx scripts/run-humboldt-case.ts case-output/humboldt-2026
+      - name: Publish reproducible assessment artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ruthless-humboldt-case-assessment
+          path: case-output/humboldt-2026/
+          if-no-files-found: error
+          retention-days: 30

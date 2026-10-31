@@ -221,6 +221,13 @@
       "type": "FACTUAL",
       "evidenceClass": "historically-documented",
       "scope": "WWII"
+    },
+    {
+      "id": "c-oct-utility-sightings",
+      "text": "Arcata and McKinleyville residents reported low-flying helicopters in October 2026.",
+      "type": "FACTUAL",
+      "evidenceClass": "anecdotal-sightings-plus-documented-utility-program",
+      "scope": "October 2026"
     }
   ],
   "evidence": [
@@ -302,7 +309,7 @@
       "text": "October 25 residents reported helicopters in both McKinleyville and Arcata.",
       "type": "TESTIMONY",
       "supports": [
-        "c-military-flights"
+        "c-oct-utility-sightings"
       ]
     },
     {
@@ -416,7 +423,8 @@
         "c-military-flights",
         "c-aug-counterdrug",
         "c-feb-cg-training",
-        "c-sept-pge"
+        "c-sept-pge",
+        "c-oct-utility-sightings"
       ],
       "caution": "Do not transfer one event's confirmed explanation onto other dates."
     },

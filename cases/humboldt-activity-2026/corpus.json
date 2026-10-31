@@ -1,0 +1,463 @@
+{
+  "caseId": "humboldt-public-activity-2026",
+  "question": "Do recent strange aircraft activity, booms, vibrations or underground passage reports around McKinleyville/Humboldt County demonstrate active covert military underground construction?",
+  "asOf": "2026-10-31",
+  "method": "sourced deterministic evidence-lineage and contradiction audit; NOT a live multi-model council",
+  "sourceVerification": "Source content sampled manually from publicly available webpages, date-matched where possible. No restricted access or surveillance.",
+  "sources": [
+    {
+      "id": "aug-military-report",
+      "title": "August 19, 2026: military helicopters and counterdrug operation, Redheaded Blackbelt",
+      "url": "https://kymkemp.com/2026/08/19/convoy-with-skidsteer-spotted-after-two-days-of-military-helicopters-over-the-emerald-triangle/",
+      "sourceType": "SECONDARY_REPORT",
+      "isPrimary": true,
+      "notes": "Reporter directly sought California Military Department and sheriff statements; one article is still one reporting lineage.",
+      "cites": []
+    },
+    {
+      "id": "feb-coastguard-report",
+      "title": "February 11, 2026: Coast Guard commander explains local training, Redheaded Blackbelt",
+      "url": "https://kymkemp.com/2026/02/11/low-flying-helicopters-over-greater-eureka-spark-questions/",
+      "sourceType": "SECONDARY_REPORT",
+      "isPrimary": true,
+      "notes": "Direct reported interview with Coast Guard commander; distinguishes February 4 flights from other sightings.",
+      "cites": []
+    },
+    {
+      "id": "pge-announcement",
+      "title": "September 25, 2026: PG&E public release about LiDAR helicopter work, published by Redheaded Blackbelt",
+      "url": "https://kymkemp.com/2026/09/25/pge-helicopters-to-hover-over-humboldt-for-about-a-month/",
+      "sourceType": "SECONDARY_REPORT",
+      "isPrimary": true,
+      "notes": "Republished PG&E statement, localities and planned dates; confirms a program, not an individual helicopter.",
+      "cites": []
+    },
+    {
+      "id": "reddit-oct-25",
+      "title": "October 25, 2026: Arcata and McKinleyville helicopter eyewitness comments",
+      "url": "https://www.reddit.com/r/Humboldt/comments/1xffsxs/helicopters_today/",
+      "sourceType": "TESTIMONY",
+      "isPrimary": true,
+      "notes": "Different commenters in one thread are not independently verified field measurements.",
+      "cites": []
+    },
+    {
+      "id": "reddit-feb-05",
+      "title": "February 5, 2026: helicopter eyewitness thread, Humboldt subreddit",
+      "url": "https://www.reddit.com/r/Humboldt/comments/1qwamzo/what_in_the_world_was_that/",
+      "sourceType": "TESTIMONY",
+      "isPrimary": true,
+      "notes": "Firsthand reports; exact correspondence to Coast Guard Feb 4 flight has not been established.",
+      "cites": []
+    },
+    {
+      "id": "reddit-aug-30",
+      "title": "August 30, 2026: Chinooks over Arcata discussion",
+      "url": "https://www.reddit.com/r/Humboldt/comments/1w2v87w/chinooks_over_arcata_around_315/",
+      "sourceType": "TESTIMONY",
+      "isPrimary": true,
+      "notes": "Discussion includes photo, people reporting loud helicopters and an unverified transit explanation.",
+      "cites": []
+    },
+    {
+      "id": "jan-chinook-report",
+      "title": "January 11, 2026: MH-47G Chinook FROG87 flight-tracking coverage",
+      "url": "https://kymkemp.com/2026/01/11/army-chinook-helicopter-draws-attention-during-flight-over-north-coast/",
+      "sourceType": "SECONDARY_REPORT",
+      "isPrimary": true,
+      "notes": "Local article reports a tracked flight; not evidence of underground activity.",
+      "cites": []
+    },
+    {
+      "id": "reddit-shake-sept",
+      "title": "September 10, 2026: intermittent shaking in Arcata",
+      "url": "https://www.reddit.com/r/Humboldt/comments/1wcy25j/yall_shaking_in_arcata/",
+      "sourceType": "TESTIMONY",
+      "isPrimary": true,
+      "notes": "Poster reports a rattling TV and a supervisor's nearby office; the drilling theory is speculation.",
+      "cites": []
+    },
+    {
+      "id": "reddit-boom-sept",
+      "title": "September 2026: Bayside/Sunnybrae loud bang and firework witness reports",
+      "url": "https://www.reddit.com/r/Humboldt/comments/1wqjeao/wtf_was_that/",
+      "sourceType": "TESTIMONY",
+      "isPrimary": true,
+      "notes": "Several conflicting commenters in a single thread; one claims witnessing fireworks and another suggests a falling object.",
+      "cites": []
+    },
+    {
+      "id": "reddit-boom-jan",
+      "title": "January 25, 2026: public debate over Eureka booms",
+      "url": "https://www.reddit.com/r/Humboldt/comments/1qmvrrq/eureka_booms/",
+      "sourceType": "TESTIMONY",
+      "isPrimary": true,
+      "notes": "Speculation includes military, fireworks and underground digging; not a technical measurement.",
+      "cites": []
+    },
+    {
+      "id": "reddit-boom-jan-separate",
+      "title": "January 25, 2026: 7:55am boom reports",
+      "url": "https://www.reddit.com/r/Humboldt/comments/1qmmvm2/huge_boom_755am_eureka_sunday_125/",
+      "sourceType": "TESTIMONY",
+      "isPrimary": true,
+      "notes": "Several comments describe boom heard across local communities; no source verification.",
+      "cites": []
+    },
+    {
+      "id": "reddit-tunnels",
+      "title": "July 17, 2025: discussion of alleged Eureka/Arcata tunnels",
+      "url": "https://www.reddit.com/r/Humboldt/comments/1m1wp3i/tunnels/",
+      "sourceType": "TESTIMONY",
+      "isPrimary": true,
+      "notes": "Many comments are secondhand accounts or jokes; claims about hospital passages remain unverified.",
+      "cites": []
+    },
+    {
+      "id": "nps-radar",
+      "title": "National Park Service: B-71 WWII radar station",
+      "url": "https://www.nps.gov/places/redwoodradarstation.htm",
+      "sourceType": "GOVERNMENT_RECORD",
+      "isPrimary": true,
+      "notes": "Direct historical site description. Klamath/Del Norte location is not evidence of an active McKinleyville underground base.",
+      "cites": []
+    },
+    {
+      "id": "humboldt-naval-history",
+      "title": "Cal Poly Humboldt collection: historical Naval Air Station Arcata FIDO program",
+      "url": "https://www.humboldt.edu/special-collections/heres-final-chapter-history-naval-air-station-arcata",
+      "sourceType": "SECONDARY_REPORT",
+      "isPrimary": true,
+      "notes": "Archive transcribes a 1945 historical newspaper report; indicates experimental fog-dispersal operations in the past.",
+      "cites": []
+    },
+    {
+      "id": "reddit-oct-25-pge-explanation",
+      "title": "October 25, 2026 discussion commenters repeat PG&E inspection explanation",
+      "url": "https://www.reddit.com/r/Humboldt/comments/1xffsxs/helicopters_today/",
+      "sourceType": "SECONDARY_REPORT",
+      "isPrimary": false,
+      "notes": "Commenters' PG&E explanation appears derived from the PG&E notice rather than independent program confirmation.",
+      "cites": [
+        "pge-announcement"
+      ]
+    }
+  ],
+  "claims": [
+    {
+      "id": "c-military-flights",
+      "text": "Military helicopters operated visibly in Humboldt County during 2026.",
+      "type": "FACTUAL",
+      "evidenceClass": "documented",
+      "scope": "regional",
+      "important": true
+    },
+    {
+      "id": "c-aug-counterdrug",
+      "text": "Some August 2026 military helicopter flights supported county/state counterdrug enforcement.",
+      "type": "FACTUAL",
+      "evidenceClass": "reported-with-agency-attribution",
+      "scope": "August 2026"
+    },
+    {
+      "id": "c-feb-cg-training",
+      "text": "Coast Guard helicopters conducted announced training near Eureka-area airports around February 4, 2026.",
+      "type": "FACTUAL",
+      "evidenceClass": "reported-with-agency-attribution",
+      "scope": "February 4"
+    },
+    {
+      "id": "c-sept-pge",
+      "text": "PG&E announced helicopter LiDAR inspections around McKinleyville and Arcata from late September into October 2026.",
+      "type": "FACTUAL",
+      "evidenceClass": "documented-announced-program",
+      "scope": "September-October"
+    },
+    {
+      "id": "c-helicopter-explained-all",
+      "text": "Every unusual helicopter report in Humboldt County was caused by PG&E or routine training.",
+      "type": "CAUSAL",
+      "evidenceClass": "overbroad-unproven",
+      "scope": "all sightings"
+    },
+    {
+      "id": "c-sept-shaking",
+      "text": "At least one September 10 Arcata poster reported recurring vibrations during the day.",
+      "type": "FACTUAL",
+      "evidenceClass": "anecdotal-report",
+      "scope": "September 10"
+    },
+    {
+      "id": "c-active-tunnels",
+      "text": "Recent vibrations and booms demonstrate an active secret military underground construction program around McKinleyville.",
+      "type": "CAUSAL",
+      "evidenceClass": "unsupported-hypothesis",
+      "scope": "present"
+    },
+    {
+      "id": "c-sept-boom-firework",
+      "text": "The late September 2026 Bayside/Sunnybrae boom was caused by a firework.",
+      "type": "CAUSAL",
+      "evidenceClass": "disputed-eyewitness-attribution",
+      "scope": "September boom"
+    },
+    {
+      "id": "c-jan-booms",
+      "text": "Residents reported loud booms near Eureka on January 25, 2026.",
+      "type": "FACTUAL",
+      "evidenceClass": "multiple-online-report-threads",
+      "scope": "January 25"
+    },
+    {
+      "id": "c-civic-tunnels",
+      "text": "Older Eureka/Arcata buildings have locally rumored or remembered service passages and tunnels.",
+      "type": "FACTUAL",
+      "evidenceClass": "unverified-local-history",
+      "scope": "historical"
+    },
+    {
+      "id": "c-ww2-hidden-sites",
+      "text": "The broader North Coast historically had deliberately camouflaged military radar sites and a naval aviation testing installation.",
+      "type": "FACTUAL",
+      "evidenceClass": "historically-documented",
+      "scope": "WWII"
+    }
+  ],
+  "evidence": [
+    {
+      "id": "ev-aug-copter",
+      "sourceId": "aug-military-report",
+      "text": "Contemporary reporter documented tracked and photographed military helicopters over the Emerald Triangle August 17-19, 2026.",
+      "type": "SECONDARY_REPORT",
+      "supports": [
+        "c-military-flights"
+      ]
+    },
+    {
+      "id": "ev-aug-official",
+      "sourceId": "aug-military-report",
+      "text": "California Military Department operations official and Humboldt County sheriff confirmed military aviation support for marijuana enforcement; quoted by the reporter.",
+      "type": "ATTRIBUTION",
+      "supports": [
+        "c-aug-counterdrug"
+      ]
+    },
+    {
+      "id": "ev-feb-cg",
+      "sourceId": "feb-coastguard-report",
+      "text": "Coast Guard commander confirmed planned training flights around local fields on February 4, 2026, as reported February 11.",
+      "type": "ATTRIBUTION",
+      "supports": [
+        "c-feb-cg-training"
+      ]
+    },
+    {
+      "id": "ev-feb-reddit",
+      "sourceId": "reddit-feb-05",
+      "text": "On February 5, residents described low and loud helicopters; timing is not conclusively paired to February 4 Coast Guard report.",
+      "type": "TESTIMONY",
+      "supports": [
+        "c-military-flights"
+      ]
+    },
+    {
+      "id": "ev-aug30-reddit",
+      "sourceId": "reddit-aug-30",
+      "text": "Multiple commenters reported Chinook-style aircraft passing over Arcata and McKinleyville, with a photo attached to the thread.",
+      "type": "TESTIMONY",
+      "supports": [
+        "c-military-flights"
+      ]
+    },
+    {
+      "id": "ev-jan-chinook",
+      "sourceId": "jan-chinook-report",
+      "text": "Local reporter identified January 2026 Chinook flight call sign FROG87 with flight-tracking observations.",
+      "type": "SECONDARY_REPORT",
+      "supports": [
+        "c-military-flights"
+      ]
+    },
+    {
+      "id": "ev-pge-notice",
+      "sourceId": "pge-announcement",
+      "text": "PG&E announced helicopter inspections using LiDAR and imagery for listed zip codes including McKinleyville and Arcata, starting September 22.",
+      "type": "ATTRIBUTION",
+      "supports": [
+        "c-sept-pge"
+      ]
+    },
+    {
+      "id": "ev-pge-repeated",
+      "sourceId": "reddit-oct-25-pge-explanation",
+      "text": "October 25 commenters repeated that PG&E contractors were checking power infrastructure.",
+      "type": "SECONDARY_REPORT",
+      "supports": [
+        "c-sept-pge"
+      ]
+    },
+    {
+      "id": "ev-oct25-witness",
+      "sourceId": "reddit-oct-25",
+      "text": "October 25 residents reported helicopters in both McKinleyville and Arcata.",
+      "type": "TESTIMONY",
+      "supports": [
+        "c-military-flights"
+      ]
+    },
+    {
+      "id": "ev-shake",
+      "sourceId": "reddit-shake-sept",
+      "text": "September 10 poster said their TV rattled periodically; building supervisor reported vibration at an office several blocks away.",
+      "type": "TESTIMONY",
+      "supports": [
+        "c-sept-shaking"
+      ]
+    },
+    {
+      "id": "ev-shake-no-source",
+      "sourceId": "reddit-shake-sept",
+      "text": "Poster explicitly did not know why the shaking occurred; deep drilling was the supervisor's suggested explanation without records.",
+      "type": "LIMITATION",
+      "contradicts": [
+        "c-active-tunnels"
+      ]
+    },
+    {
+      "id": "ev-boom-firework",
+      "sourceId": "reddit-boom-sept",
+      "text": "One commenter claimed to have seen a person set off a firework and drive away; another described seeing an out-of-state pyrotechnic.",
+      "type": "TESTIMONY",
+      "supports": [
+        "c-sept-boom-firework"
+      ]
+    },
+    {
+      "id": "ev-boom-competing",
+      "sourceId": "reddit-boom-sept",
+      "text": "Other commenters reported a bright flash and downward whistle and speculated about an object falling; no impact artifact was documented.",
+      "type": "TESTIMONY",
+      "contradicts": [
+        "c-sept-boom-firework"
+      ]
+    },
+    {
+      "id": "ev-jan-booms-1",
+      "sourceId": "reddit-boom-jan",
+      "text": "A January 25 forum thread collected accounts and speculation about repeated Eureka-area booms.",
+      "type": "TESTIMONY",
+      "supports": [
+        "c-jan-booms"
+      ]
+    },
+    {
+      "id": "ev-jan-booms-2",
+      "sourceId": "reddit-boom-jan-separate",
+      "text": "A separate January 25 forum thread describes approximately 7:55 a.m. boom heard in several local neighborhoods.",
+      "type": "TESTIMONY",
+      "supports": [
+        "c-jan-booms"
+      ]
+    },
+    {
+      "id": "ev-tunnels",
+      "sourceId": "reddit-tunnels",
+      "text": "Commenters related secondhand stories of passages between former hospitals and under parts of Arcata Plaza; no contemporary military use verified.",
+      "type": "TESTIMONY",
+      "supports": [
+        "c-civic-tunnels"
+      ]
+    },
+    {
+      "id": "ev-radar",
+      "sourceId": "nps-radar",
+      "text": "National Park Service documents WWII radar Station B-71 disguised as a farm near Klamath; abandoned after the war.",
+      "type": "GOVERNMENT_RECORD",
+      "supports": [
+        "c-ww2-hidden-sites"
+      ]
+    },
+    {
+      "id": "ev-fido",
+      "sourceId": "humboldt-naval-history",
+      "text": "Cal Poly Humboldt holds a 1945 account of Arcata naval air station's experimental FIDO fog-dispersal work.",
+      "type": "SECONDARY_REPORT",
+      "supports": [
+        "c-ww2-hidden-sites"
+      ]
+    }
+  ],
+  "investigativeLeads": [
+    {
+      "event": "November 2025 low-frequency rumble",
+      "status": "not independently re-opened",
+      "url": "https://www.reddit.com/r/Humboldt/comments/1p20vri/weird_sounds_at_320_am/",
+      "note": "Previous summary described this; the current verification search did not retrieve the post; excluded from supporting evidence."
+    },
+    {
+      "event": "Mad River silent lights (Nextdoor)",
+      "status": "not independently re-opened",
+      "url": "https://nextdoor.com/neighborhood/mckinleyville--mckinleyville--ca/",
+      "note": "Undated public preview; excluded from evidence pending dated original."
+    },
+    {
+      "event": "September 2026 Arcata ground vibrations",
+      "status": "reported but source unknown",
+      "url": "https://www.reddit.com/r/Humboldt/comments/1wcy25j/yall_shaking_in_arcata/",
+      "note": "Needs exact times, USGS seismic/industrial data and permitted construction records."
+    }
+  ],
+  "hypotheses": [
+    {
+      "id": "H1",
+      "statement": "Several unusual aircraft episodes have documented military, Coast Guard or utility explanations.",
+      "status": "supported-for-specific-episodes",
+      "claims": [
+        "c-military-flights",
+        "c-aug-counterdrug",
+        "c-feb-cg-training",
+        "c-sept-pge"
+      ],
+      "caution": "Do not transfer one event's confirmed explanation onto other dates."
+    },
+    {
+      "id": "H2",
+      "statement": "Some booms were caused by fireworks or other surface activity.",
+      "status": "plausible-not-confirmed",
+      "claims": [
+        "c-sept-boom-firework",
+        "c-jan-booms"
+      ],
+      "caution": "Witness statements compete, no physical verification for September incident."
+    },
+    {
+      "id": "H3",
+      "statement": "There were intermittent shaking/rumbling phenomena with unknown physical causes.",
+      "status": "reported-cause-not-established",
+      "claims": [
+        "c-sept-shaking",
+        "c-jan-booms"
+      ],
+      "caution": "Reports require seismic and infrastructure records."
+    },
+    {
+      "id": "H4",
+      "statement": "An active covert underground military installation caused recent noises or vibrations.",
+      "status": "not-substantiated",
+      "claims": [
+        "c-active-tunnels"
+      ],
+      "caution": "No directly dated site engineering records, excavation documents, measurements or material samples."
+    },
+    {
+      "id": "H5",
+      "statement": "Historic military infrastructure and old civic passages account for local tunnel folklore.",
+      "status": "partly-supported-historical-context-only",
+      "claims": [
+        "c-ww2-hidden-sites",
+        "c-civic-tunnels"
+      ],
+      "caution": "Confirmed WWII sites do not prove a present-day tunnel network."
+    }
+  ]
+}
